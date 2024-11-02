@@ -21,15 +21,12 @@ public class YoutubeService {
     @Value("${YOUTUBE_API_KEY}")
     private String apiKey;
 
-    public List<ThumbnailData> fetchTrendingVideos(String category) throws IOException {
+    public List<ThumbnailData> fetchTrendingVideos() throws IOException {
+        // snippet: basic video info like title, description, and thumbnails
         YouTube.Videos.List request = youTube.videos().list("snippet,contentDetails");
         request.setKey(apiKey);
         request.setChart("mostPopular");
         request.setRegionCode("IN");
-
-        if (category != null) {
-            request.setVideoCategoryId(category);
-        }
 
         // Limiting to 50 videos (YouTube API max)
         request.setMaxResults(50L);
@@ -37,7 +34,7 @@ public class YoutubeService {
         VideoListResponse response = request.execute();
 
         return response.getItems().stream()
-                .map(this::convertToThumbnailData)
+                .map(d -> convertToThumbnailData(d))
                 .collect(Collectors.toList());
     }
 

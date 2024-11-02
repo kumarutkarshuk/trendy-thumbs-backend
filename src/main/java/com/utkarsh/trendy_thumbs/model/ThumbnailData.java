@@ -1,8 +1,6 @@
 package com.utkarsh.trendy_thumbs.model;
 
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +13,7 @@ import java.util.List;
 @Entity
 @Builder
 @NoArgsConstructor
+// must here for Spring compatibility
 @AllArgsConstructor
 public class ThumbnailData {
     @Id
@@ -30,14 +29,21 @@ public class ThumbnailData {
 
     // Analysis fields
     @ElementCollection
-    private List<String> dominantColors;   // List of dominant colors in hex format
+    // changing table name & PK/FK column name
+    @CollectionTable(name = "dominant_colors", joinColumns = @JoinColumn(name = "video_id"))
+    @Column(name = "dominant_color")
+    private List<String> dominantColors;
 
-    private int textWordCount;             // Word count of detected text in the thumbnail
+    private int wordCount;
 
-//    @ElementCollection
-//    private List<String> fontStyles;       // List of detected font styles or text characteristics
+    @ElementCollection
+    @CollectionTable(name = "object_labels", joinColumns = @JoinColumn(name = "video_id"))
+    @Column(name = "object_label")
+    private List<String> objectLabels; // what objects are there in the thumbnail
 
-//    private String layoutComplexity;       // Description of layout complexity (e.g., "Simple", "Moderate", "Complex")
+    @ElementCollection
+    @CollectionTable(name = "facial_expressions", joinColumns = @JoinColumn(name = "video_id"))
+    @Column(name = "facial_expression")
+    private List<String> facialExpressions;
 
-//    private String designTrends;           // Insights on design trends (e.g., "Red Dominant", "Minimalist")
 }

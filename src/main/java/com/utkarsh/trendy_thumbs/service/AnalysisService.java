@@ -22,11 +22,11 @@ public class AnalysisService {
 
     private final ThumbnailDataRepo thumbnailDataRepo;
 
-    public ResponseEntity<List<ThumbnailAnalysis>> analyzeTrendingThumbnails(String category) {
+    public ResponseEntity<List<ThumbnailAnalysis>> analyzeTrendingThumbnails() {
 
         List<ThumbnailData> thumbnails = null;
         try {
-            thumbnails = youtubeService.fetchTrendingVideos(category);
+            thumbnails = youtubeService.fetchTrendingVideos();
         } catch (Exception e) {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -43,7 +43,9 @@ public class AnalysisService {
             ThumbnailAnalysis thumbnailAnalysis = thumbnailAnalysisList.get(i);
 
             thumbnailData.setDominantColors(thumbnailAnalysis.getDominantColors());
-            thumbnailData.setTextWordCount(thumbnailAnalysis.getTextWordCount());
+            thumbnailData.setWordCount(thumbnailAnalysis.getWordCount());
+            thumbnailData.setObjectLabels(thumbnailAnalysis.getObjectLabels());
+            thumbnailData.setFacialExpressions(thumbnailAnalysis.getFacialExpressions());
         }
 
         thumbnailDataRepo.saveAll(thumbnails);
@@ -54,9 +56,7 @@ public class AnalysisService {
         try {
             return googleVisionService.analyzeThumbnail(thumbnailData);
         } catch (Exception e) {
-            ThumbnailAnalysis failedAnalysis = new ThumbnailAnalysis();
-            failedAnalysis.setVideoId(thumbnailData.getVideoId());
-            return failedAnalysis;
+            return ThumbnailAnalysis.builder().videoId(thumbnailData.getVideoId()).build();
         }
     }
 }

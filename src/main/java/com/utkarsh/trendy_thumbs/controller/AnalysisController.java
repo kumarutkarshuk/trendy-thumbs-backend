@@ -16,14 +16,7 @@ public class AnalysisController {
         private final AnalysisService analysisService;
 
         @GetMapping("/analyze")
-        public ResponseEntity<List<ThumbnailAnalysis>> analyzeTrendingThumbnails(
-                @RequestParam(required = false) String category
-        ){
-
-            return analysisService.analyzeTrendingThumbnails(category);
-
+        public ResponseEntity<List<ThumbnailAnalysis>> analyzeTrendingThumbnails(){
+            return analysisService.analyzeTrendingThumbnails();
         }
-
-
-
 }

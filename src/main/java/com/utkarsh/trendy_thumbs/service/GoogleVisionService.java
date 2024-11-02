@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,48 +29,54 @@ public class GoogleVisionService {
         // Perform analysis
         List<String> dominantColors = extractDominantColors(image);
         int textWordCount = countTextWords(image);
-//        List<String> fontStyles = detectFontStyles(image);
-//        int layoutComplexity = analyzeLayoutComplexity(image);
-//        String designTrends = identifyDesignTrends(image);
+        List<String> objectLabels = detectObjectLabels(image);
+        List<String> facialExpressions = detectExpressions(image);
 
         // Build analysis result
-        ThumbnailAnalysis analysis = new ThumbnailAnalysis();
-        analysis.setVideoId(thumbnailData.getVideoId());
-        analysis.setDominantColors(dominantColors);
-        analysis.setTextWordCount(textWordCount);
-//        analysis.setFontStyles(fontStyles);
-//        analysis.setLayoutComplexity(layoutComplexity);
-//        analysis.setDesignTrends(designTrends);
-
-        return analysis;
+        return ThumbnailAnalysis
+                .builder()
+                .videoId(thumbnailData.getVideoId())
+                .dominantColors(dominantColors)
+                .wordCount(textWordCount)
+                .objectLabels(objectLabels)
+                .facialExpressions(facialExpressions)
+                .build();
     }
 
     private List<String> extractDominantColors(Image image) throws IOException {
+        // Create an AnnotateImageRequest to analyze the image for its properties
         AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
                 .addFeatures(Feature.newBuilder().setType(Feature.Type.IMAGE_PROPERTIES).build())
                 .setImage(image)
                 .build();
 
+        // Execute the request and get the response
         AnnotateImageResponse response = visionClient.batchAnnotateImages(List.of(request)).getResponsesList().get(0);
+
+        // Extract the dominant colors from the image properties annotation
         DominantColorsAnnotation colorsAnnotation = response.getImagePropertiesAnnotation().getDominantColors();
 
+        // Process the dominant colors, limiting to the top 5 colors
         return colorsAnnotation.getColorsList().stream()
-                .limit(5)  // Top 5 colors
+                .limit(5)
                 .map(color -> formatColor(color.getColor()))
                 .collect(Collectors.toList());
     }
 
     private int countTextWords(Image image) throws IOException {
+        // Create an AnnotateImageRequest to detect text in the image
         AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
                 .addFeatures(Feature.newBuilder().setType(Feature.Type.TEXT_DETECTION).build())
                 .setImage(image)
                 .build();
 
+        // Execute the request and get the response
         List<EntityAnnotation> textAnnotations = visionClient.batchAnnotateImages(List.of(request))
                 .getResponsesList()
                 .get(0)
                 .getTextAnnotationsList();
 
+        // Return the word count from the detected text
         return textAnnotations.isEmpty() ? 0 : textAnnotations.get(0).getDescription().split("\\s+").length;
     }
 
@@ -81,43 +88,68 @@ public class GoogleVisionService {
         );
     }
 
-//    private List<String> detectFontStyles(Image image) throws IOException {
-//        AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
-//                .addFeatures(Feature.newBuilder().setType(Feature.Type.TEXT_DETECTION).build())
-//                .setImage(image)
-//                .build();
-//
-//        List<EntityAnnotation> textAnnotations = visionClient.batchAnnotateImages(List.of(request))
-//                .getResponsesList()
-//                .get(0)
-//                .getTextAnnotationsList();
-//
-//        // Detect font styles by analyzing text features (mock example)
-//        return textAnnotations.stream()
-//                .map(annotation -> "Bold")  // Replace with actual font style detection if available
-//                .distinct()
-//                .collect(Collectors.toList());
-//    }
+    public List<String> detectObjectLabels(Image image) throws IOException {
+        // Create a request for LABEL_DETECTION
+        AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
+                .addFeatures(Feature.newBuilder().setType(Feature.Type.LABEL_DETECTION).build())
+                .setImage(image)
+                .build();
 
-//    private int analyzeLayoutComplexity(Image image) throws IOException {
-//        // Example logic for layout complexity
-//        AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
-//                .addFeatures(Feature.newBuilder().setType(Feature.Type.OBJECT_LOCALIZATION).build())
-//                .setImage(image)
-//                .build();
-//
-//        List<LocalizedObjectAnnotation> objects = visionClient.batchAnnotateImages(List.of(request))
-//                .getResponsesList()
-//                .get(0)
-//                .getLocalizedObjectAnnotationsList();
-//
-//        return objects.size();  // Number of objects as a proxy for layout complexity
-//    }
+        // Perform the request
+        List<AnnotateImageResponse> responses = visionClient.batchAnnotateImages(List.of(request)).getResponsesList();
 
-//    private String identifyDesignTrends(Image image) throws IOException {
-//        // This could include detecting if specific elements or color patterns are present
-//        // Example: Check for common design elements (mock implementation)
-//        List<String> dominantColors = extractDominantColors(image);
-//        return dominantColors.contains("#FF0000") ? "Red Dominant" : "No Trend";
-//    }
+        // Check for errors
+        if (responses.isEmpty() || responses.get(0).hasError()) {
+            System.err.println("Error detecting labels: " + (responses.isEmpty() ? "No object detected" : responses.get(0).getError().getMessage()));
+            return List.of();
+        }
+
+        // Extract labels from the response (excluding confidence %)
+        return responses.get(0).getLabelAnnotationsList().stream()
+                .map(label -> label.getDescription())
+                .collect(Collectors.toList());
+    }
+
+    public List<String> detectExpressions(Image image) throws IOException {
+        // Create a request for FACE_DETECTION
+        AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
+                .addFeatures(Feature.newBuilder().setType(Feature.Type.FACE_DETECTION).build())
+                .setImage(image)
+                .build();
+
+        // Perform the request
+        List<AnnotateImageResponse> responses = visionClient.batchAnnotateImages(List.of(request)).getResponsesList();
+
+        // Check for errors
+        if (responses.isEmpty() || responses.get(0).hasError()) {
+            System.err.println("Error detecting faces: " + (responses.isEmpty() ? "No face detected" : responses.get(0).getError().getMessage()));
+            return List.of();
+        }
+
+        // List to hold likely expressions
+        List<String> likelyExpressions = new ArrayList<>();
+
+        // Extract likely facial expressions from the response
+        for (FaceAnnotation face : responses.get(0).getFaceAnnotationsList()) {
+            if (face.getJoyLikelihood().getNumber() >= 3) {
+                likelyExpressions.add("Joy");
+            }
+            if (face.getSorrowLikelihood().getNumber() >= 3) {
+                likelyExpressions.add("Sorrow");
+            }
+            if (face.getAngerLikelihood().getNumber() >= 3) {
+                likelyExpressions.add("Anger");
+            }
+            if (face.getSurpriseLikelihood().getNumber() >= 3) {
+                likelyExpressions.add("Surprise");
+            }
+            if (face.getHeadwearLikelihood().getNumber() >= 3) {
+                likelyExpressions.add("Headwear");
+            }
+        }
+
+        // add unique expressions to the list (for the cases where 2 faces with same emotion are there)
+        return likelyExpressions.stream().distinct().collect(Collectors.toList());
+    }
+
 }
