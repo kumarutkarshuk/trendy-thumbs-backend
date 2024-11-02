@@ -38,4 +38,9 @@ public class AnalysisController {
         public ResponseEntity<Map<FacialExpression, Integer>> getFacialExpressionsCategorized(){
             return analysisService.getFacialExpressionsCategorized();
         }
+
+        @GetMapping("/wordCountCategorized")
+        public ResponseEntity<Map<String, Integer>> getWordCountCategorized(){
+            return analysisService.getWordCountCategorized();
+        }
 }

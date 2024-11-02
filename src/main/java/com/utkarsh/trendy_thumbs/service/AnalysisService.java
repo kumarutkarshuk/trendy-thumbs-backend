@@ -60,15 +60,6 @@ public class AnalysisService {
         return new ResponseEntity<>(thumbnailAnalysisList, HttpStatus.OK);
     }
 
-    private ThumbnailAnalysis analyzeThumbnail(ThumbnailData thumbnailData) {
-        try {
-            return googleVisionService.analyzeThumbnail(thumbnailData);
-        } catch (Exception e) {
-            return ThumbnailAnalysis.builder().videoId(thumbnailData.getVideoId()).build();
-        }
-    }
-
-
     public ResponseEntity<List<String>> getTrendingThumbnails() {
         try{
             List<ThumbnailData> thumbnailDataList = getThumbnailData();
@@ -79,16 +70,6 @@ public class AnalysisService {
             return new ResponseEntity<>(trendingThumbnails, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    // to be cached
-    public List<ThumbnailData> getThumbnailData() throws Exception {
-        try{
-            PageRequest pageRequest = PageRequest.of(0, 50, Sort.by("fetchedAt").descending());
-            return thumbnailDataRepo.findAll(pageRequest).getContent();
-        } catch (Exception e) {
-            throw new Exception("Error fetching thumbnail data");
         }
     }
 
@@ -108,12 +89,95 @@ public class AnalysisService {
         }
     }
 
-    public Map<ColorCategory, Integer> categorizeColors(List<String> hexColors) {
+    public ResponseEntity<Map<FacialExpression, Integer>> getFacialExpressionsCategorized() {
+        try{
+            List<ThumbnailData> thumbnailDataList = getThumbnailData();
+
+            Map<FacialExpression, Integer> facialExpressionsCategorized = new HashMap<>();
+
+            facialExpressionsCategorized.put(FacialExpression.JOY, 0);
+            facialExpressionsCategorized.put(FacialExpression.SORROW, 0);
+            facialExpressionsCategorized.put(FacialExpression.ANGER, 0);
+            facialExpressionsCategorized.put(FacialExpression.SURPRISE, 0);
+            facialExpressionsCategorized.put(FacialExpression.HEADWEAR, 0);
+
+            // can be improved I think
+            thumbnailDataList.stream().forEach(d -> d.getFacialExpressions().stream().forEach(
+                    e -> facialExpressionsCategorized.put(e, facialExpressionsCategorized.get(e) + 1)
+            ));
+
+            return new ResponseEntity<>(facialExpressionsCategorized, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<Map<String, Integer>> getWordCountCategorized() {
+        try{
+            List<ThumbnailData> thumbnailDataList = getThumbnailData();
+
+            Map<String, Integer> wordCountCategorized = new HashMap<>();
+            wordCountCategorized.put("0-5", 0);
+            wordCountCategorized.put("6-10", 0);
+            wordCountCategorized.put("11-15", 0);
+            wordCountCategorized.put("16-20", 0);
+            wordCountCategorized.put("20+", 0);
+
+            for(ThumbnailData thumbnailData : thumbnailDataList){
+                if(thumbnailData.getWordCount() <= 5){
+                    wordCountCategorized.put("0-5", wordCountCategorized.get("0-5") + 1);
+                }else if(thumbnailData.getWordCount() >= 6 && thumbnailData.getWordCount() <= 10){
+                    wordCountCategorized.put("6-10", wordCountCategorized.get("6-10") + 1);
+                }else if(thumbnailData.getWordCount() >= 11 && thumbnailData.getWordCount() <= 15){
+                    wordCountCategorized.put("11-15", wordCountCategorized.get("11-15") + 1);
+                }else if(thumbnailData.getWordCount() >= 16 && thumbnailData.getWordCount() <= 20){
+                    wordCountCategorized.put("16-20", wordCountCategorized.get("16-20") + 1);
+                }else{
+                    wordCountCategorized.put("20+", wordCountCategorized.get("20+") + 1);
+                }
+            }
+
+            return new ResponseEntity<>(wordCountCategorized, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private ThumbnailAnalysis analyzeThumbnail(ThumbnailData thumbnailData) {
+        try {
+            return googleVisionService.analyzeThumbnail(thumbnailData);
+        } catch (Exception e) {
+            return ThumbnailAnalysis.builder().videoId(thumbnailData.getVideoId()).build();
+        }
+    }
+
+    // to be cached
+    private List<ThumbnailData> getThumbnailData() throws Exception {
+        try{
+            PageRequest pageRequest = PageRequest.of(0, 50, Sort.by("fetchedAt").descending());
+            return thumbnailDataRepo.findAll(pageRequest).getContent();
+        } catch (Exception e) {
+            throw new Exception("Error fetching thumbnail data");
+        }
+    }
+
+    private Map<ColorCategory, Integer> categorizeColors(List<String> hexColors) {
         Map<ColorCategory, Integer> categories = new HashMap<>();
+
+        categories.put(ColorCategory.WHITE, 0);
+        categories.put(ColorCategory.BLACK, 0);
+        categories.put(ColorCategory.GRAY, 0);
+        categories.put(ColorCategory.RED, 0);
+        categories.put(ColorCategory.GREEN, 0);
+        categories.put(ColorCategory.BLUE, 0);
+        categories.put(ColorCategory.YELLOW, 0);
+        categories.put(ColorCategory.OTHER, 0);
 
         for (String hex : hexColors) {
             ColorCategory color = getBasicColor(hex);
-            categories.put(color, categories.getOrDefault(color, 0) + 1);
+            categories.put(color, categories.get(color) + 1);
         }
 
         return categories;
@@ -137,24 +201,6 @@ public class AnalysisService {
             return ColorCategory.OTHER;
         } catch (Exception e) {
             return ColorCategory.OTHER;
-        }
-    }
-
-    public ResponseEntity<Map<FacialExpression, Integer>> getFacialExpressionsCategorized() {
-        try{
-            List<ThumbnailData> thumbnailDataList = getThumbnailData();
-
-            Map<FacialExpression, Integer> facialExpressionsCategorized = new HashMap<>();
-
-            // can be improved I think
-            thumbnailDataList.stream().forEach(d -> d.getFacialExpressions().stream().forEach(
-                    e -> facialExpressionsCategorized.put(e, facialExpressionsCategorized.getOrDefault(e, 0) + 1)
-            ));
-
-            return new ResponseEntity<>(facialExpressionsCategorized, HttpStatus.OK);
-
-        } catch (Exception e) {
-            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
