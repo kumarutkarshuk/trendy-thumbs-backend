@@ -1,19 +1,20 @@
 package com.utkarsh.trendy_thumbs.model;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-@Entity
 @Builder
 @NoArgsConstructor
-// must here for Spring compatibility
+@Document(collection = "thumbnailData")
+// must here for Spring compatibility if using @NoArgsConstructor & @Builder
 @AllArgsConstructor
 public class ThumbnailData {
     @Id
@@ -28,22 +29,12 @@ public class ThumbnailData {
     private LocalDateTime fetchedAt;
 
     // Analysis fields
-    @ElementCollection
-    // changing table name & PK/FK column name
-    @CollectionTable(name = "dominant_colors", joinColumns = @JoinColumn(name = "video_id"))
-    @Column(name = "dominant_color")
     private List<String> dominantColors;
 
     private int wordCount;
 
-    @ElementCollection
-    @CollectionTable(name = "object_labels", joinColumns = @JoinColumn(name = "video_id"))
-    @Column(name = "object_label")
     private List<String> objectLabels; // what objects are there in the thumbnail
 
-    @ElementCollection
-    @CollectionTable(name = "facial_expressions", joinColumns = @JoinColumn(name = "video_id"))
-    @Column(name = "facial_expression")
     private List<String> facialExpressions;
 
 }
