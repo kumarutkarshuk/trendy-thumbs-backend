@@ -1,9 +1,9 @@
 package com.utkarsh.trendy_thumbs.service;
 
-import com.utkarsh.trendy_thumbs.model.ColorCategory;
 import com.utkarsh.trendy_thumbs.model.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.ThumbnailData;
+import com.utkarsh.trendy_thumbs.model.dto.ColorCategory;
 import com.utkarsh.trendy_thumbs.repo.ThumbnailDataRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -73,7 +73,7 @@ public class AnalysisService {
         }
     }
 
-    public ResponseEntity<Map<ColorCategory, Integer>> getCategorizedColors() {
+    public ResponseEntity<ColorCategory> getCategorizedColors() {
         try{
             List<ThumbnailData> thumbnailDataList = getThumbnailData();
             List<String> hexColors = new ArrayList<>();
@@ -81,11 +81,11 @@ public class AnalysisService {
             thumbnailDataList
                     .stream()
                     .forEach(d -> d.getDominantColors().stream().forEach(color -> hexColors.add(color)));
-            Map<ColorCategory, Integer> categorizedColors = categorizeColors(hexColors);
+            ColorCategory categorizedColors = categorizeColors(hexColors);
             return new ResponseEntity<>(categorizedColors, HttpStatus.OK);
 
         } catch (Exception e) {
-            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(ColorCategory.builder().build(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -163,44 +163,44 @@ public class AnalysisService {
         }
     }
 
-    private Map<ColorCategory, Integer> categorizeColors(List<String> hexColors) {
-        Map<ColorCategory, Integer> categories = new HashMap<>();
-
-        categories.put(ColorCategory.WHITE, 0);
-        categories.put(ColorCategory.BLACK, 0);
-        categories.put(ColorCategory.GRAY, 0);
-        categories.put(ColorCategory.RED, 0);
-        categories.put(ColorCategory.GREEN, 0);
-        categories.put(ColorCategory.BLUE, 0);
-        categories.put(ColorCategory.YELLOW, 0);
-        categories.put(ColorCategory.OTHER, 0);
+    private ColorCategory categorizeColors(List<String> hexColors) {
+        ColorCategory categorizedColors = ColorCategory.builder().build();
 
         for (String hex : hexColors) {
-            ColorCategory color = getBasicColor(hex);
-            categories.put(color, categories.get(color) + 1);
+            updateCategorizedColors(hex, categorizedColors);
         }
 
-        return categories;
+        return categorizedColors;
     }
 
-    private ColorCategory getBasicColor(String hex) {
+    private void updateCategorizedColors(String hex, ColorCategory categorizedColors) {
         try {
             Color color = Color.decode(hex);
             int r = color.getRed();
             int g = color.getGreen();
             int b = color.getBlue();
 
-            if (r > 200 && g > 200 && b > 200) return ColorCategory.WHITE;
-            if (r < 50 && g < 50 && b < 50) return ColorCategory.BLACK;
-            if (Math.abs(r - g) < 30 && Math.abs(g - b) < 30) return ColorCategory.GRAY;
-            if (r > g && r > b) return ColorCategory.RED;
-            if (g > r && g > b) return ColorCategory.GREEN;
-            if (b > r && b > g) return ColorCategory.BLUE;
-            if (r > 200 && g > 200) return ColorCategory.YELLOW;
+            if (r > 200 && g > 200 && b > 200) {
+                categorizedColors.setWhite(categorizedColors.getWhite() + 1);
+            } else if (r < 50 && g < 50 && b < 50) {
+                categorizedColors.setBlack(categorizedColors.getBlack() + 1);
+            } else if (Math.abs(r - g) < 30 && Math.abs(g - b) < 30) {
+                categorizedColors.setGray(categorizedColors.getGray() + 1);
+            } else if (r > g && r > b) {
+                categorizedColors.setRed(categorizedColors.getRed() + 1);
+            } else if (g > r && g > b) {
+                categorizedColors.setGreen(categorizedColors.getGreen() + 1);
+            } else if (b > r && b > g) {
+                categorizedColors.setBlue(categorizedColors.getBlue() + 1);
+            } else if (r > 200 && g > 200) {
+                categorizedColors.setYellow(categorizedColors.getYellow() + 1);
+            }else{
+                categorizedColors.setOther(categorizedColors.getOther() + 1);
+            }
 
-            return ColorCategory.OTHER;
         } catch (Exception e) {
-            return ColorCategory.OTHER;
+            categorizedColors.setOther(categorizedColors.getOther() + 1);
         }
     }
+
 }
