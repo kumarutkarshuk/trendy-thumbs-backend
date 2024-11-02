@@ -18,6 +18,6 @@ public class ThumbnailAnalysis {
 
     private List<String> objectLabels;
 
-    private List<String> facialExpressions;
+    private List<FacialExpression> facialExpressions;
 
 }

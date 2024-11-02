@@ -1,1 +1,1 @@
-- code in GoogleVisionService is not analyzed line by line
+- code in GoogleVisionService, color categorization is not analyzed line by line

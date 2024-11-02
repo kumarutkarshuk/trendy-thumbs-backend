@@ -1,8 +1,7 @@
 package com.utkarsh.trendy_thumbs.service;
 
 import com.google.cloud.vision.v1.*;
-import com.google.cloud.vision.v1.Image;
-import com.google.type.Color;
+import com.utkarsh.trendy_thumbs.model.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.ThumbnailData;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +29,7 @@ public class GoogleVisionService {
         List<String> dominantColors = extractDominantColors(image);
         int textWordCount = countTextWords(image);
         List<String> objectLabels = detectObjectLabels(image);
-        List<String> facialExpressions = detectExpressions(image);
+        List<FacialExpression> facialExpressions = detectExpressions(image);
 
         // Build analysis result
         return ThumbnailAnalysis
@@ -43,7 +42,7 @@ public class GoogleVisionService {
                 .build();
     }
 
-    private List<String> extractDominantColors(Image image) throws IOException {
+    public List<String> extractDominantColors(Image image) throws IOException {
         // Create an AnnotateImageRequest to analyze the image for its properties
         AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
                 .addFeatures(Feature.newBuilder().setType(Feature.Type.IMAGE_PROPERTIES).build())
@@ -59,8 +58,16 @@ public class GoogleVisionService {
         // Process the dominant colors, limiting to the top 5 colors
         return colorsAnnotation.getColorsList().stream()
                 .limit(5)
-                .map(color -> formatColor(color.getColor()))
+                .map(color -> formatColor(color))
                 .collect(Collectors.toList());
+    }
+
+    private String formatColor(ColorInfo colorInfo) {
+        int red = (int) (colorInfo.getColor().getRed());
+        int green = (int) (colorInfo.getColor().getGreen());
+        int blue = (int) (colorInfo.getColor().getBlue());
+
+        return String.format("#%02X%02X%02X", red, green, blue);
     }
 
     private int countTextWords(Image image) throws IOException {
@@ -78,14 +85,6 @@ public class GoogleVisionService {
 
         // Return the word count from the detected text
         return textAnnotations.isEmpty() ? 0 : textAnnotations.get(0).getDescription().split("\\s+").length;
-    }
-
-    private String formatColor(Color color) {
-        return String.format("#%02X%02X%02X",
-                (int) (color.getRed() * 255),
-                (int) (color.getGreen() * 255),
-                (int) (color.getBlue() * 255)
-        );
     }
 
     public List<String> detectObjectLabels(Image image) throws IOException {
@@ -110,7 +109,7 @@ public class GoogleVisionService {
                 .collect(Collectors.toList());
     }
 
-    public List<String> detectExpressions(Image image) throws IOException {
+    public List<FacialExpression> detectExpressions(Image image) throws IOException {
         // Create a request for FACE_DETECTION
         AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
                 .addFeatures(Feature.newBuilder().setType(Feature.Type.FACE_DETECTION).build())
@@ -127,24 +126,24 @@ public class GoogleVisionService {
         }
 
         // List to hold likely expressions
-        List<String> likelyExpressions = new ArrayList<>();
+        List<FacialExpression> likelyExpressions = new ArrayList<>();
 
         // Extract likely facial expressions from the response
         for (FaceAnnotation face : responses.get(0).getFaceAnnotationsList()) {
             if (face.getJoyLikelihood().getNumber() >= 3) {
-                likelyExpressions.add("Joy");
+                likelyExpressions.add(FacialExpression.JOY);
             }
             if (face.getSorrowLikelihood().getNumber() >= 3) {
-                likelyExpressions.add("Sorrow");
+                likelyExpressions.add(FacialExpression.SORROW);
             }
             if (face.getAngerLikelihood().getNumber() >= 3) {
-                likelyExpressions.add("Anger");
+                likelyExpressions.add(FacialExpression.ANGER);
             }
             if (face.getSurpriseLikelihood().getNumber() >= 3) {
-                likelyExpressions.add("Surprise");
+                likelyExpressions.add(FacialExpression.SURPRISE);
             }
             if (face.getHeadwearLikelihood().getNumber() >= 3) {
-                likelyExpressions.add("Headwear");
+                likelyExpressions.add(FacialExpression.HEADWEAR);
             }
         }
 

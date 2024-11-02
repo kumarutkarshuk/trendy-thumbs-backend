@@ -35,6 +35,6 @@ public class ThumbnailData {
 
     private List<String> objectLabels; // what objects are there in the thumbnail
 
-    private List<String> facialExpressions;
+    private List<FacialExpression> facialExpressions;
 
 }
