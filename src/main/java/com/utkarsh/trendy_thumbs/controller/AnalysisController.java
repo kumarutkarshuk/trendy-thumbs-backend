@@ -1,8 +1,8 @@
 package com.utkarsh.trendy_thumbs.controller;
 
-import com.utkarsh.trendy_thumbs.model.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.dto.ColorCategory;
+import com.utkarsh.trendy_thumbs.model.dto.ExpressionCategory;
 import com.utkarsh.trendy_thumbs.service.AnalysisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -34,12 +34,12 @@ public class AnalysisController {
         }
 
         @GetMapping("/facialExpressionsCategorized")
-        public ResponseEntity<Map<FacialExpression, Integer>> getFacialExpressionsCategorized(){
+        public ResponseEntity<ExpressionCategory> getFacialExpressionsCategorized(){
             return analysisService.getFacialExpressionsCategorized();
         }
 
-        @GetMapping("/wordCountCategorized")
-        public ResponseEntity<Map<String, Integer>> getWordCountCategorized(){
-            return analysisService.getWordCountCategorized();
+        @GetMapping("/wordCountList")
+        public ResponseEntity<List<Integer>> getWordCountList(){
+            return analysisService.getWordCountList();
         }
 }

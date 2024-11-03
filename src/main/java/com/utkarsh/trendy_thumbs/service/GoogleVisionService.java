@@ -1,7 +1,7 @@
 package com.utkarsh.trendy_thumbs.service;
 
 import com.google.cloud.vision.v1.*;
-import com.utkarsh.trendy_thumbs.model.FacialExpression;
+import com.utkarsh.trendy_thumbs.model.enums.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.ThumbnailData;
 import lombok.RequiredArgsConstructor;
@@ -120,31 +120,49 @@ public class GoogleVisionService {
         List<AnnotateImageResponse> responses = visionClient.batchAnnotateImages(List.of(request)).getResponsesList();
 
         // Check for errors
-        if (responses.isEmpty() || responses.get(0).hasError()) {
-            System.err.println("Error detecting faces: " + (responses.isEmpty() ? "No face detected" : responses.get(0).getError().getMessage()));
+        if(responses.get(0).hasError()){
+            System.err.println("Error detecting faces: " + responses.get(0).getError().getMessage());
             return List.of();
+        }
+
+        // Check for no-face
+        if (responses.get(0).getFaceAnnotationsList().isEmpty()) {
+            return List.of(FacialExpression.NOFACE);
         }
 
         // List to hold likely expressions
         List<FacialExpression> likelyExpressions = new ArrayList<>();
 
+        boolean expressionAdded = false;
+
         // Extract likely facial expressions from the response
         for (FaceAnnotation face : responses.get(0).getFaceAnnotationsList()) {
+
             if (face.getJoyLikelihood().getNumber() >= 3) {
                 likelyExpressions.add(FacialExpression.JOY);
+                expressionAdded = true;
             }
             if (face.getSorrowLikelihood().getNumber() >= 3) {
                 likelyExpressions.add(FacialExpression.SORROW);
+                expressionAdded = true;
             }
             if (face.getAngerLikelihood().getNumber() >= 3) {
                 likelyExpressions.add(FacialExpression.ANGER);
+                expressionAdded = true;
             }
             if (face.getSurpriseLikelihood().getNumber() >= 3) {
                 likelyExpressions.add(FacialExpression.SURPRISE);
+                expressionAdded = true;
             }
             if (face.getHeadwearLikelihood().getNumber() >= 3) {
                 likelyExpressions.add(FacialExpression.HEADWEAR);
+                expressionAdded = true;
             }
+
+        }
+
+        if (!expressionAdded) {
+            likelyExpressions.add(FacialExpression.OTHER);
         }
 
         // add unique expressions to the list (for the cases where 2 faces with same emotion are there)

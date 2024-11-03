@@ -1,9 +1,10 @@
 package com.utkarsh.trendy_thumbs.service;
 
-import com.utkarsh.trendy_thumbs.model.FacialExpression;
+import com.utkarsh.trendy_thumbs.model.enums.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.ThumbnailData;
 import com.utkarsh.trendy_thumbs.model.dto.ColorCategory;
+import com.utkarsh.trendy_thumbs.model.dto.ExpressionCategory;
 import com.utkarsh.trendy_thumbs.repo.ThumbnailDataRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -89,59 +90,50 @@ public class AnalysisService {
         }
     }
 
-    public ResponseEntity<Map<FacialExpression, Integer>> getFacialExpressionsCategorized() {
+    public ResponseEntity<ExpressionCategory> getFacialExpressionsCategorized() {
         try{
             List<ThumbnailData> thumbnailDataList = getThumbnailData();
 
-            Map<FacialExpression, Integer> facialExpressionsCategorized = new HashMap<>();
-
-            facialExpressionsCategorized.put(FacialExpression.JOY, 0);
-            facialExpressionsCategorized.put(FacialExpression.SORROW, 0);
-            facialExpressionsCategorized.put(FacialExpression.ANGER, 0);
-            facialExpressionsCategorized.put(FacialExpression.SURPRISE, 0);
-            facialExpressionsCategorized.put(FacialExpression.HEADWEAR, 0);
+            ExpressionCategory expressionCategory = ExpressionCategory.builder().build();
 
             // can be improved I think
             thumbnailDataList.stream().forEach(d -> d.getFacialExpressions().stream().forEach(
-                    e -> facialExpressionsCategorized.put(e, facialExpressionsCategorized.get(e) + 1)
+                   e -> {
+                       if (e == FacialExpression.JOY){
+                           expressionCategory.setJoy(expressionCategory.getJoy() + 1);
+                       }else if(e == FacialExpression.SORROW){
+                           expressionCategory.setSorrow(expressionCategory.getSorrow() + 1);
+                       }else if(e == FacialExpression.ANGER){
+                           expressionCategory.setAnger(expressionCategory.getAnger() + 1);
+                       }else if(e == FacialExpression.SURPRISE){
+                           expressionCategory.setSurprise(expressionCategory.getSurprise() + 1);
+                       }else if(e == FacialExpression.HEADWEAR){
+                           expressionCategory.setHeadWear(expressionCategory.getHeadWear() + 1);
+                       }else if(e == FacialExpression.NOFACE){
+                           expressionCategory.setNoFace(expressionCategory.getNoFace() + 1);
+                       }else{
+                           expressionCategory.setOther(expressionCategory.getOther() + 1);
+                       }
+                   }
             ));
 
-            return new ResponseEntity<>(facialExpressionsCategorized, HttpStatus.OK);
+            return new ResponseEntity<>(expressionCategory, HttpStatus.OK);
 
         } catch (Exception e) {
-            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(ExpressionCategory.builder().build(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    public ResponseEntity<Map<String, Integer>> getWordCountCategorized() {
+    public ResponseEntity<List<Integer>> getWordCountList() {
         try{
             List<ThumbnailData> thumbnailDataList = getThumbnailData();
 
-            Map<String, Integer> wordCountCategorized = new HashMap<>();
-            wordCountCategorized.put("0-5", 0);
-            wordCountCategorized.put("6-10", 0);
-            wordCountCategorized.put("11-15", 0);
-            wordCountCategorized.put("16-20", 0);
-            wordCountCategorized.put("20+", 0);
+            List<Integer> wordCountList = thumbnailDataList.stream().map(d -> d.getWordCount()).toList();
 
-            for(ThumbnailData thumbnailData : thumbnailDataList){
-                if(thumbnailData.getWordCount() <= 5){
-                    wordCountCategorized.put("0-5", wordCountCategorized.get("0-5") + 1);
-                }else if(thumbnailData.getWordCount() >= 6 && thumbnailData.getWordCount() <= 10){
-                    wordCountCategorized.put("6-10", wordCountCategorized.get("6-10") + 1);
-                }else if(thumbnailData.getWordCount() >= 11 && thumbnailData.getWordCount() <= 15){
-                    wordCountCategorized.put("11-15", wordCountCategorized.get("11-15") + 1);
-                }else if(thumbnailData.getWordCount() >= 16 && thumbnailData.getWordCount() <= 20){
-                    wordCountCategorized.put("16-20", wordCountCategorized.get("16-20") + 1);
-                }else{
-                    wordCountCategorized.put("20+", wordCountCategorized.get("20+") + 1);
-                }
-            }
-
-            return new ResponseEntity<>(wordCountCategorized, HttpStatus.OK);
+            return new ResponseEntity<>(wordCountList, HttpStatus.OK);
 
         } catch (Exception e) {
-            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

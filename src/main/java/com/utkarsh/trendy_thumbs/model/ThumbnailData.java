@@ -1,5 +1,6 @@
 package com.utkarsh.trendy_thumbs.model;
 
+import com.utkarsh.trendy_thumbs.model.enums.FacialExpression;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
