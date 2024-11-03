@@ -3,13 +3,13 @@ package com.utkarsh.trendy_thumbs.controller;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.dto.ColorCategory;
 import com.utkarsh.trendy_thumbs.model.dto.ExpressionCategory;
+import com.utkarsh.trendy_thumbs.model.dto.ThumbnailDTO;
 import com.utkarsh.trendy_thumbs.service.AnalysisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,7 +24,7 @@ public class AnalysisController {
         }
 
         @GetMapping("/thumbnails")
-        public ResponseEntity<List<String>> getTrendingThumbnails(){
+        public ResponseEntity<List<ThumbnailDTO>> getTrendingThumbnails(){
             return analysisService.getTrendingThumbnails();
         }
 

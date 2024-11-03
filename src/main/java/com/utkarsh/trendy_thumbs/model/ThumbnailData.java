@@ -29,6 +29,8 @@ public class ThumbnailData {
 
     private LocalDateTime fetchedAt;
 
+    private String videoUrl;
+
     // Analysis fields
     private List<String> dominantColors;
 

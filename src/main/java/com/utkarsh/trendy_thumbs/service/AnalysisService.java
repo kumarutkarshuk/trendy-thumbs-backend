@@ -1,6 +1,7 @@
 package com.utkarsh.trendy_thumbs.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.utkarsh.trendy_thumbs.model.dto.ThumbnailDTO;
 import com.utkarsh.trendy_thumbs.model.enums.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.ThumbnailData;
@@ -62,12 +63,17 @@ public class AnalysisService {
         return new ResponseEntity<>(thumbnailAnalysisList, HttpStatus.OK);
     }
 
-    public ResponseEntity<List<String>> getTrendingThumbnails() {
+    public ResponseEntity<List<ThumbnailDTO>> getTrendingThumbnails() {
         try{
             List<ThumbnailData> thumbnailDataList = getThumbnailData();
-            List<String> trendingThumbnails = new ArrayList<>();
-            for(int i=0; i<12; i++){
-                trendingThumbnails.add(thumbnailDataList.get(i).getThumbnailUrl());
+            List<ThumbnailDTO> trendingThumbnails = new ArrayList<>();
+            for(int i=0; i<10; i++){
+                trendingThumbnails.add(ThumbnailDTO
+                        .builder()
+                                .thumbnailUrl(thumbnailDataList.get(i).getThumbnailUrl())
+                                .title(thumbnailDataList.get(i).getTitle())
+                                .videoUrl(thumbnailDataList.get(i).getVideoUrl())
+                        .build());
             }
             return new ResponseEntity<>(trendingThumbnails, HttpStatus.OK);
         } catch (Exception e) {

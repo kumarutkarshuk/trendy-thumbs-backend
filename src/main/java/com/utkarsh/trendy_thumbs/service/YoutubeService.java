@@ -26,7 +26,7 @@ public class YoutubeService {
         YouTube.Videos.List request = youTube.videos().list("snippet,contentDetails");
         request.setKey(apiKey);
         request.setChart("mostPopular");
-        request.setRegionCode("IN");
+//        request.setRegionCode("IN");
 
         // Limiting to 50 videos (YouTube API max)
         request.setMaxResults(50L);
@@ -45,6 +45,7 @@ public class YoutubeService {
                 .title(video.getSnippet().getTitle())
                 .channelTitle(video.getSnippet().getChannelTitle())
                 .thumbnailUrl(video.getSnippet().getThumbnails().getHigh().getUrl())
+                .videoUrl("https://www.youtube.com/watch?v=" + video.getId())
                 .fetchedAt(LocalDateTime.now())
                 .build();
     }
