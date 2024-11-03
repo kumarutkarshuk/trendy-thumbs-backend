@@ -1,1 +1,2 @@
 - code in GoogleVisionService, color categorization is not analyzed line by line
+- Caffeine caching implemented which is an in-memory cache

@@ -1,5 +1,6 @@
 package com.utkarsh.trendy_thumbs.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.utkarsh.trendy_thumbs.model.enums.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.ThumbnailData;
@@ -15,9 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +28,8 @@ public class AnalysisService {
     private final GoogleVisionService googleVisionService;
 
     private final ThumbnailDataRepo thumbnailDataRepo;
+
+    private final Cache<String, List<ThumbnailData>> thumbnailDataCache;
 
     public ResponseEntity<List<ThumbnailAnalysis>> analyzeTrendingThumbnails() {
 
@@ -145,11 +146,21 @@ public class AnalysisService {
         }
     }
 
-    // to be cached
-    private List<ThumbnailData> getThumbnailData() throws Exception {
+    public List<ThumbnailData> getThumbnailData() throws Exception {
         try{
-            PageRequest pageRequest = PageRequest.of(0, 50, Sort.by("fetchedAt").descending());
-            return thumbnailDataRepo.findAll(pageRequest).getContent();
+            List<ThumbnailData> data = thumbnailDataCache.getIfPresent("thumbnailData");
+
+            if (data != null) {
+//                System.out.println("Cache hit");
+                return data;
+            } else {
+//                System.out.println("Cache miss");
+                PageRequest pageRequest = PageRequest.of(0, 50, Sort.by("fetchedAt").descending());
+                data = thumbnailDataRepo.findAll(pageRequest).getContent();
+                thumbnailDataCache.put("thumbnailData", data);
+                return data;
+            }
+
         } catch (Exception e) {
             throw new Exception("Error fetching thumbnail data");
         }
