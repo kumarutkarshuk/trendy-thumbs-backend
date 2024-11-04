@@ -1,12 +1,14 @@
 package com.utkarsh.trendy_thumbs.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.utkarsh.trendy_thumbs.model.ColorData;
+import com.utkarsh.trendy_thumbs.model.ExpressionData;
 import com.utkarsh.trendy_thumbs.model.dto.ThumbnailDTO;
 import com.utkarsh.trendy_thumbs.model.enums.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
 import com.utkarsh.trendy_thumbs.model.ThumbnailData;
-import com.utkarsh.trendy_thumbs.model.dto.ColorCategory;
-import com.utkarsh.trendy_thumbs.model.dto.ExpressionCategory;
+import com.utkarsh.trendy_thumbs.model.dto.ColorDetails;
+import com.utkarsh.trendy_thumbs.model.dto.ExpressionDetails;
 import com.utkarsh.trendy_thumbs.repo.ThumbnailDataRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -16,7 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.awt.*;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,6 +49,10 @@ public class AnalysisService {
                 .map(d -> analyzeThumbnail(d))
                 .collect(Collectors.toList());
 
+        ColorData colorData = analyzeDominantColors(thumbnailAnalysisList);
+
+        ExpressionData expressionData = analyzeFacialExpressions(thumbnailAnalysisList);
+
         int n = thumbnails.size();
         for(int i=0; i<n; i++) {
 
@@ -56,6 +63,8 @@ public class AnalysisService {
             thumbnailData.setWordCount(thumbnailAnalysis.getWordCount());
             thumbnailData.setObjectLabels(thumbnailAnalysis.getObjectLabels());
             thumbnailData.setFacialExpressions(thumbnailAnalysis.getFacialExpressions());
+            thumbnailData.setColorData(colorData);
+            thumbnailData.setExpressionData(expressionData);
         }
 
         thumbnailDataRepo.saveAll(thumbnails);
@@ -81,56 +90,6 @@ public class AnalysisService {
         }
     }
 
-    public ResponseEntity<ColorCategory> getCategorizedColors() {
-        try{
-            List<ThumbnailData> thumbnailDataList = getThumbnailData();
-            List<String> hexColors = new ArrayList<>();
-            // can be improved I think
-            thumbnailDataList
-                    .stream()
-                    .forEach(d -> d.getDominantColors().stream().forEach(color -> hexColors.add(color)));
-            ColorCategory categorizedColors = categorizeColors(hexColors);
-            return new ResponseEntity<>(categorizedColors, HttpStatus.OK);
-
-        } catch (Exception e) {
-            return new ResponseEntity<>(ColorCategory.builder().build(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public ResponseEntity<ExpressionCategory> getFacialExpressionsCategorized() {
-        try{
-            List<ThumbnailData> thumbnailDataList = getThumbnailData();
-
-            ExpressionCategory expressionCategory = ExpressionCategory.builder().build();
-
-            // can be improved I think
-            thumbnailDataList.stream().forEach(d -> d.getFacialExpressions().stream().forEach(
-                   e -> {
-                       if (e == FacialExpression.JOY){
-                           expressionCategory.setJoy(expressionCategory.getJoy() + 1);
-                       }else if(e == FacialExpression.SORROW){
-                           expressionCategory.setSorrow(expressionCategory.getSorrow() + 1);
-                       }else if(e == FacialExpression.ANGER){
-                           expressionCategory.setAnger(expressionCategory.getAnger() + 1);
-                       }else if(e == FacialExpression.SURPRISE){
-                           expressionCategory.setSurprise(expressionCategory.getSurprise() + 1);
-                       }else if(e == FacialExpression.HEADWEAR){
-                           expressionCategory.setHeadWear(expressionCategory.getHeadWear() + 1);
-                       }else if(e == FacialExpression.NOFACE){
-                           expressionCategory.setNoFace(expressionCategory.getNoFace() + 1);
-                       }else{
-                           expressionCategory.setOther(expressionCategory.getOther() + 1);
-                       }
-                   }
-            ));
-
-            return new ResponseEntity<>(expressionCategory, HttpStatus.OK);
-
-        } catch (Exception e) {
-            return new ResponseEntity<>(ExpressionCategory.builder().build(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     public ResponseEntity<List<Integer>> getWordCountList() {
         try{
             List<ThumbnailData> thumbnailDataList = getThumbnailData();
@@ -138,6 +97,30 @@ public class AnalysisService {
             List<Integer> wordCountList = thumbnailDataList.stream().map(d -> d.getWordCount()).toList();
 
             return new ResponseEntity<>(wordCountList, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<List<ColorDetails>> getDominantColorDetails() {
+        try{
+            ThumbnailData firstThumbnailData = getThumbnailData().get(0);
+            List<ColorDetails> response = firstThumbnailData.getColorData().getColorDetailsList();
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<List<ExpressionDetails>> getFacialExpressionDetails() {
+        try{
+            ThumbnailData firstThumbnailData = getThumbnailData().get(0);
+            List<ExpressionDetails> response = firstThumbnailData.getExpressionData().getExpressionDetailsList();
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
 
         } catch (Exception e) {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -152,6 +135,7 @@ public class AnalysisService {
         }
     }
 
+    // maybe for caching this method has to be public
     public List<ThumbnailData> getThumbnailData() throws Exception {
         try{
             List<ThumbnailData> data = thumbnailDataCache.getIfPresent("thumbnailData");
@@ -172,44 +156,98 @@ public class AnalysisService {
         }
     }
 
-    private ColorCategory categorizeColors(List<String> hexColors) {
-        ColorCategory categorizedColors = ColorCategory.builder().build();
+    private ColorData analyzeDominantColors(List<ThumbnailAnalysis> thumbnailAnalysisList) {
+        List<String> hexColors = new ArrayList<>();
 
-        for (String hex : hexColors) {
-            updateCategorizedColors(hex, categorizedColors);
-        }
+        thumbnailAnalysisList.forEach(d -> hexColors.addAll(d.getDominantColors()));
 
-        return categorizedColors;
+        // Get color data with categorized colors
+        return getColorData(hexColors);
     }
 
-    private void updateCategorizedColors(String hex, ColorCategory categorizedColors) {
+    private ColorData getColorData(List<String> hexColors) {
+        Map<String, Integer> colorCategoryCounts = new HashMap<>();
+
+        for (String hex : hexColors) {
+            String category = categorizeColor(hex);
+            colorCategoryCounts.put(category, colorCategoryCounts.getOrDefault(category, 0) + 1);
+        }
+
+        List<ColorDetails> colorDetailsList = colorCategoryCounts.entrySet().stream()
+                .map(entry -> ColorDetails
+                        .builder()
+                        .color(entry.getKey())
+                        .value(entry.getValue())
+                        .fill(getFillColor(entry.getKey()))
+                        .build())
+                .collect(Collectors.toList());
+
+        return ColorData.builder().colorDetailsList(colorDetailsList).analyzedAt(LocalDateTime.now()).build();
+    }
+
+    private String categorizeColor(String hex) {
         try {
             Color color = Color.decode(hex);
             int r = color.getRed();
             int g = color.getGreen();
             int b = color.getBlue();
 
-            if (r > 200 && g > 200 && b > 200) {
-                categorizedColors.setWhite(categorizedColors.getWhite() + 1);
-            } else if (r < 50 && g < 50 && b < 50) {
-                categorizedColors.setBlack(categorizedColors.getBlack() + 1);
-            } else if (Math.abs(r - g) < 30 && Math.abs(g - b) < 30) {
-                categorizedColors.setGray(categorizedColors.getGray() + 1);
-            } else if (r > g && r > b) {
-                categorizedColors.setRed(categorizedColors.getRed() + 1);
-            } else if (g > r && g > b) {
-                categorizedColors.setGreen(categorizedColors.getGreen() + 1);
-            } else if (b > r && b > g) {
-                categorizedColors.setBlue(categorizedColors.getBlue() + 1);
-            } else if (r > 200 && g > 200) {
-                categorizedColors.setYellow(categorizedColors.getYellow() + 1);
-            }else{
-                categorizedColors.setOther(categorizedColors.getOther() + 1);
-            }
+            if (r > 200 && g > 200 && b > 200) return "White";
+            else if (r < 50 && g < 50 && b < 50) return "Black";
+            else if (Math.abs(r - g) < 30 && Math.abs(g - b) < 30) return "Gray";
+            else if (r > g && r > b) return "Red";
+            else if (g > r && g > b) return "Green";
+            else if (b > r && b > g) return "Blue";
+            else if (r > 200 && g > 200) return "Yellow";
+            else return "Other";
 
         } catch (Exception e) {
-            categorizedColors.setOther(categorizedColors.getOther() + 1);
+            return "Other";
         }
     }
+
+    private String getFillColor(String category) {
+        switch (category) {
+            case "White": return "#FFFFFF";
+            case "Black": return "#000000";
+            case "Gray": return "#808080";
+            case "Red": return "#FF0000";
+            case "Green": return "#00FF00";
+            case "Blue": return "#0000FF";
+            case "Yellow": return "#FFFF00";
+            default: return "#A9A9A9"; // Default fill for "Other"
+        }
+    }
+
+    private ExpressionData analyzeFacialExpressions(List<ThumbnailAnalysis> thumbnailAnalysisList) {
+
+        // Map to count occurrences of each facial expression
+        Map<FacialExpression, Integer> expressionCountMap = new EnumMap<>(FacialExpression.class);
+
+        // Initialize counts to zero for all expressions
+        for (FacialExpression expression : FacialExpression.values()) {
+            expressionCountMap.put(expression, 0);
+        }
+
+        // Populate the count map with occurrences
+        thumbnailAnalysisList.stream()
+                .flatMap(thumbnail -> thumbnail.getFacialExpressions().stream())
+                .forEach(expression -> expressionCountMap.put(expression, expressionCountMap.get(expression) + 1));
+
+        // Convert count map to a list of ExpressionDetails
+        List<ExpressionDetails> expressionDetailsList = expressionCountMap.entrySet().stream()
+                .map(entry -> ExpressionDetails.builder()
+                        .expression(entry.getKey())
+                        .value(entry.getValue())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Build and return ExpressionData
+        return ExpressionData.builder()
+                .expressionDetailsList(expressionDetailsList)
+                .analyzedAt(LocalDateTime.now())
+                .build();
+    }
+
 
 }

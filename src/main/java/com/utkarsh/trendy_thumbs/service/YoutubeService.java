@@ -29,7 +29,7 @@ public class YoutubeService {
 //        request.setRegionCode("IN");
 
         // Limiting to 50 videos (YouTube API max)
-        request.setMaxResults(50L);
+        request.setMaxResults(2L);
 
         VideoListResponse response = request.execute();
 

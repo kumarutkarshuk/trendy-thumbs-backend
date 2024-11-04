@@ -1,2 +1,3 @@
 - code in GoogleVisionService, color categorization is not analyzed line by line
 - Caffeine caching implemented which is an in-memory cache
+- ig mongodb is allowing only 50 docs to be stored at a time

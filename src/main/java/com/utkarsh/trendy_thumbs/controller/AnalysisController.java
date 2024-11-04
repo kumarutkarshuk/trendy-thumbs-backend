@@ -1,8 +1,8 @@
 package com.utkarsh.trendy_thumbs.controller;
 
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
-import com.utkarsh.trendy_thumbs.model.dto.ColorCategory;
-import com.utkarsh.trendy_thumbs.model.dto.ExpressionCategory;
+import com.utkarsh.trendy_thumbs.model.dto.ColorDetails;
+import com.utkarsh.trendy_thumbs.model.dto.ExpressionDetails;
 import com.utkarsh.trendy_thumbs.model.dto.ThumbnailDTO;
 import com.utkarsh.trendy_thumbs.service.AnalysisService;
 import lombok.RequiredArgsConstructor;
@@ -28,18 +28,19 @@ public class AnalysisController {
             return analysisService.getTrendingThumbnails();
         }
 
-        @GetMapping("/dominantColorsCategorized")
-        public ResponseEntity<ColorCategory> getCategorizedColors(){
-            return analysisService.getCategorizedColors();
-        }
-
-        @GetMapping("/facialExpressionsCategorized")
-        public ResponseEntity<ExpressionCategory> getFacialExpressionsCategorized(){
-            return analysisService.getFacialExpressionsCategorized();
-        }
-
         @GetMapping("/wordCountList")
         public ResponseEntity<List<Integer>> getWordCountList(){
             return analysisService.getWordCountList();
         }
+
+        @GetMapping("/dominantColorDetails")
+        public ResponseEntity<List<ColorDetails>> getDominantColorDetails(){
+            return analysisService.getDominantColorDetails();
+        }
+
+        @GetMapping("/facialExpressionDetails")
+        public ResponseEntity<List<ExpressionDetails>> getFacialExpressionDetails(){
+            return analysisService.getFacialExpressionDetails();
+        }
+
 }
