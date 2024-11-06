@@ -12,7 +12,7 @@ What you also need:
 - **Google Vision API credentials**
 - **MongoDB credentials**
 
-## Clone the Repository
+## Steps
 
 - First, clone the repository to your local machine:
 
