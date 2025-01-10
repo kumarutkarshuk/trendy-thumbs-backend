@@ -10,6 +10,7 @@ import lombok.Data;
 public class ExpressionDetails {
     @NotNull
     private FacialExpression expression;
+    // // or count
     @NotNull
     private int value;
 }
