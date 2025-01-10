@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -32,22 +31,27 @@ public class ThumbnailData {
 
     private String videoUrl;
 
-    // Analysis fields
+    // for a thumbnail
     private List<String> dominantColors;
 
+    // for a thumbnail
     private int wordCount;
 
-    private List<String> objectLabels; // what objects are there in the thumbnail
+    // for a thumbnail
+    private List<String> objectLabels;
 
+    // for a thumbnail
     private List<FacialExpression> facialExpressions;
 
     // using embedded mongodb documents (separate collections are not created)
     // ColorData & ExpressionData need not have @Document & their @Repository interfaces
     // not using @DBRef since joining (slow) will be involved in it and redundancy is fine with nosql db
-    // was also getting and error related to id
+    // was also getting an error related to id
+    // for all thumbnails stored redundantly
 //    @DBRef
     private ColorData colorData;
 
+    // for all thumbnails stored redundantly
 //    @DBRef
     private ExpressionData expressionData;
 

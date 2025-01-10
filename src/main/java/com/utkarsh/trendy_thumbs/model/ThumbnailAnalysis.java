@@ -8,6 +8,7 @@ import java.util.List;
 
 @Data
 @Builder
+// stores insights of each thumbnail extracted from Google Vision AI
 public class ThumbnailAnalysis {
 
     private String videoId;

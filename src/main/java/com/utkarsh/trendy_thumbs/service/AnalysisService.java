@@ -3,6 +3,7 @@ package com.utkarsh.trendy_thumbs.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.utkarsh.trendy_thumbs.model.ColorData;
 import com.utkarsh.trendy_thumbs.model.ExpressionData;
+import com.utkarsh.trendy_thumbs.model.dto.LastAnalyzedDateDTO;
 import com.utkarsh.trendy_thumbs.model.dto.ThumbnailDTO;
 import com.utkarsh.trendy_thumbs.model.enums.FacialExpression;
 import com.utkarsh.trendy_thumbs.model.ThumbnailAnalysis;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.awt.*;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,6 +41,7 @@ public class AnalysisService {
 
         List<ThumbnailData> thumbnails = null;
         try {
+            // fetch thumbnail data from YouTube
             thumbnails = youtubeService.fetchTrendingVideos();
         } catch (Exception e) {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -53,6 +56,7 @@ public class AnalysisService {
 
         ExpressionData expressionData = analyzeFacialExpressions(thumbnailAnalysisList);
 
+        // save the analysed data in the db
         int n = thumbnails.size();
         for(int i=0; i<n; i++) {
 
@@ -127,6 +131,21 @@ public class AnalysisService {
         }
     }
 
+    public ResponseEntity<LastAnalyzedDateDTO> getLastAnalyzedDate() {
+        try{
+            ThumbnailData firstThumbnailData = getThumbnailData().get(0);
+            // other analysis fields can also be used (except wordCount)
+            LocalDateTime lastAnalyzedDate = firstThumbnailData.getColorData().getAnalyzedAt();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy");
+            String formattedDate = lastAnalyzedDate.format(formatter);
+
+            return new ResponseEntity<>(LastAnalyzedDateDTO.builder().lastAnalyzedDate(formattedDate).build(), HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>(LastAnalyzedDateDTO.builder().build(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     private ThumbnailAnalysis analyzeThumbnail(ThumbnailData thumbnailData) {
         try {
             return googleVisionService.analyzeThumbnail(thumbnailData);
@@ -136,6 +155,7 @@ public class AnalysisService {
     }
 
     // maybe for caching this method has to be public
+    // returns data from the cache or fetches from db
     public List<ThumbnailData> getThumbnailData() throws Exception {
         try{
             List<ThumbnailData> data = thumbnailDataCache.getIfPresent("thumbnailData");
@@ -158,7 +178,8 @@ public class AnalysisService {
 
     private ColorData analyzeDominantColors(List<ThumbnailAnalysis> thumbnailAnalysisList) {
         List<String> hexColors = new ArrayList<>();
-
+        
+        // flatten (2D list to 1D) this dominant colors list
         thumbnailAnalysisList.forEach(d -> hexColors.addAll(d.getDominantColors()));
 
         // Get color data with categorized colors
@@ -229,7 +250,7 @@ public class AnalysisService {
             expressionCountMap.put(expression, 0);
         }
 
-        // Populate the count map with occurrences
+        // Populate the count map with occurrences after flatting the list of facial expressions
         thumbnailAnalysisList.stream()
                 .flatMap(thumbnail -> thumbnail.getFacialExpressions().stream())
                 .forEach(expression -> expressionCountMap.put(expression, expressionCountMap.get(expression) + 1));
@@ -248,6 +269,5 @@ public class AnalysisService {
                 .analyzedAt(LocalDateTime.now())
                 .build();
     }
-
 
 }

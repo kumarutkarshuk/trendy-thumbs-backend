@@ -15,7 +15,7 @@ public class CacheConfig {
     @Bean
     public Cache<String, List<ThumbnailData>> thumbnailDataCache() {
         return Caffeine.newBuilder()
-                .expireAfterWrite(10, TimeUnit.MINUTES)
+                .expireAfterWrite(1, TimeUnit.MINUTES)
                 .build();
     }
 }

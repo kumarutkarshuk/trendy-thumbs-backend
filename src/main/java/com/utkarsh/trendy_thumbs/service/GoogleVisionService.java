@@ -25,7 +25,7 @@ public class GoogleVisionService {
                         .setImageUri(thumbnailData.getThumbnailUrl()))
                 .build();
 
-        // Perform analysis
+        // Get data about the thumbnail
         List<String> dominantColors = extractDominantColors(image);
         int textWordCount = countTextWords(image);
         List<String> objectLabels = detectObjectLabels(image);
